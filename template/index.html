@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Storyteller</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="wrapper">
+    <h1>AI Storyteller</h1>
+    <p>Enter the beginning of a story, and the AI will try to continue it!</p>
+
+    <label for="prompt">Your Story Prompt:</label>
+    <textarea id="prompt" aria-label="Story Prompt" placeholder="e.g., In a land far away, there lived a curious dragon..."></textarea>
+
+    <button id="generate-button" aria-label="Generate story based on prompt">Generate Story</button>
+
+    <div class="spinner" id="loading-spinner" aria-hidden="true"></div>
+
+    <div id="error-message" class="alert" style="display: none;" role="alert"></div>
+
+    <h2>Generated Story:</h2>
+    <div id="result-display">
+      Your generated story will appear here...
+    </div>
+  </div>
+
+  <script>
+    const promptTextarea = document.getElementById('prompt');
+    const generateButton = document.getElementById('generate-button');
+    const storyOutputDiv = document.getElementById('result-display');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const errorMessageDiv = document.getElementById('error-message');
+
+    generateButton.addEventListener('click', async () => {
+      const prompt = promptTextarea.value.trim();
+      if (!prompt) {
+        displayError("Please enter a story prompt.");
+        return;
+      }
+
+      storyOutputDiv.textContent = "Generating...";
+      generateButton.disabled = true;
+      loadingSpinner.style.display = 'block';
+      errorMessageDiv.style.display = 'none';
+
+      try {
+        const response = await fetch('/generate_story', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: prompt }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.story) {
+          storyOutputDiv.textContent = data.story;
+        } else {
+          displayError("Received an empty story from the server.");
+          storyOutputDiv.textContent = "Could not generate story.";
+        }
+
+      } catch (error) {
+        console.error('Error generating story:', error);
+        displayError(`Error: ${error.message}`);
+        storyOutputDiv.textContent = "Failed to generate story. Please try again.";
+      } finally {
+        generateButton.disabled = false;
+        loadingSpinner.style.display = 'none';
+      }
+    });
+
+    function displayError(message) {
+      errorMessageDiv.textContent = message;
+      errorMessageDiv.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
